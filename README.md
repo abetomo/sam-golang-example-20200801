@@ -53,7 +53,6 @@ Next steps can be found in the README file at ./api-example/README.md
 
 ```
 % sam local start-api
-
 ```
 
 ## deploy
@@ -63,3 +62,11 @@ Next steps can be found in the README file at ./api-example/README.md
 ```
 % sam deploy --guided
 ```
+
+## delete stack
+
+```
+% aws cloudformation delete-stack --stack-name <STACK_NAME>
+```
+
+(SAM management stacks are not deleted.)
