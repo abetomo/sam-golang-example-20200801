@@ -2,8 +2,13 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
   api-example
-  
+
   Sample SAM Template for api-example
+
+Parameters:
+  StageName:
+    Type: String
+    Default: Prod
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
@@ -11,6 +16,12 @@ Globals:
     Timeout: 5
 
 Resources:
+  HelloWorldApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: !Ref StageName
+      Auth:
+        ApiKeyRequired: true # sets for all methods
   HelloWorldFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
@@ -24,19 +35,50 @@ Resources:
           Properties:
             Path: /hello
             Method: GET
+            RestApiId: !Ref HelloWorldApi
+            Auth:
+              ApiKeyRequired: true
       Environment: # More info about Env Vars: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#environment-object
         Variables:
           PARAM1: VALUE
+  HelloWorldApiKey:
+    Type: AWS::ApiGateway::ApiKey
+    DependsOn: HelloWorldApi
+    Properties:
+      Name: hello-api-key-A
+      Enabled: true
+      StageKeys:
+        - RestApiId:
+            Ref: HelloWorldApi
+          StageName: !Ref StageName
+  HelloWorldApiUsagePlan:
+    Type: AWS::ApiGateway::UsagePlan
+    DependsOn: HelloWorldApi
+    Properties:
+      ApiStages:
+      - ApiId: !Ref HelloWorldApi
+        Stage: !Ref StageName
+      UsagePlanName: hello-api-usage-plan
+
+  HelloWorldApiUsagePlanKey:
+    Type: AWS::ApiGateway::UsagePlanKey
+    DependsOn:
+      - HelloWorldApiKey
+      - HelloWorldApiUsagePlan
+    Properties :
+      KeyId: !Ref HelloWorldApiKey
+      KeyType: API_KEY
+      UsagePlanId: !Ref HelloWorldApiUsagePlan
 
 Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
   # Find out more about other implicit resources you can reference within SAM
   # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
   HelloWorldAPI:
-    Description: "API Gateway endpoint URL for Prod environment for First Function"
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
+    Description: "API Gateway endpoint URL"
+    Value: !Sub "https://${HelloWorldApi}.execute-api.${AWS::Region}.amazonaws.com/${StageName}/hello/"
   HelloWorldFunction:
-    Description: "First Lambda Function ARN"
+    Description: "Lambda Function ARN"
     Value: !GetAtt HelloWorldFunction.Arn
   HelloWorldFunctionIamRole:
     Description: "Implicit IAM Role created for Hello World function"
